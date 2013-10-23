@@ -14,7 +14,7 @@ class COINModel(Model):
 	
 class Order(COINModel):
     class Meta:
-        db_table = 'order'
+        db_table = 'orders'
 
 ##    CREATE TABLE `order` (
 ##  `address` varchar(40) NOT NULL DEFAULT '',
@@ -58,7 +58,7 @@ class Order(COINModel):
     STATUS_POOL_FREE = 0
     STATUS_PREORDER = 100
     STATUS_ACTIVE = 200
-    STATUS_SETTLED = 300
+    STATUS_FILLED = 300
     STATUS_TOPAY = 400
     STATUS_PAYED = 500
     STATUS_CONFIRMED = 550
