@@ -40,7 +40,6 @@ class OrderBook(list):
 		for left in self.orderbook:
 			self.settle_order(left.send_to_address)
 
-	
 	def show_order_book(self):
 		print '   ADDRESS  SRC TRG TYP STAT          AMT       AMT_ASK    AMT_FILLED   PRICE'
 		for order in self.orderbook:
@@ -54,3 +53,41 @@ class OrderBook(list):
 				order.amount_ask,
 				order.amount_settled,
 				order.price_ask))
+
+class OrderBookDicts(list):
+	def __init__(self, data=''):
+		self.lod = []
+		if data != '':
+			self.lod = data
+			log.debug('init with orderbook dicts')
+		else:
+			self.lod = ''
+			log.debug('init with empty orderbook dicts')
+	
+	def show_order_dicts(self):
+		for row in self.lod:
+			print row
+
+	def get_fok(self):
+		for row in self.lod:
+			if row['order_type'] == 2:
+				print row
+
+
+		
+	def query_ob(self, filter=None, sort_keys=None):
+		if filter is not None:
+			self.lod = (r for r in self.lod if filter(r))
+		if sort_keys is not None:
+ 			self.lod = sorted(self.lod, key=lambda r:[r[k] for k in sort_keys])
+		else:
+			self.lod = list(self.lod)
+		return self.lod
+
+	def lookup_ob(self,**kw):
+		self.rows = []
+		for row in self.lod:
+			for k,v in kw.iteritems():
+				if row[k] == str(v):
+					self.rows.append(row)
+		return self.rows

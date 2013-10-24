@@ -13,7 +13,7 @@ from orderd.logger import log
 #import orderd.conf
 #from orderd.conf import *
 from coindb.coindb import *
-from orderd.order_book import OrderBook
+from orderd.order_book import OrderBook, OrderBookDicts
 #from orderd.order_db import *
 #from order_db import Order
 
@@ -107,7 +107,7 @@ class OrderDaemon(Daemon):
 			# if none found get .... see voodoopad
 			x = discover_price()
 			print "Price ", x
-			sys.exit('stop')
+
 			
 			
 			######################
@@ -132,14 +132,48 @@ class OrderDaemon(Daemon):
 					& (Order.status < Order.STATUS_FILLED) 
 					& (TIMESTAMP < Order.valid_until))
 				.order_by(Order.price_ask.asc(),Order.created.desc())
-				.for_update(True)) ## maybe add nowait?
+				.for_update(True) ## maybe add nowait?
+				) 
 			active_orders.execute()
 			
-			orderbook = OrderBook(active_orders)
-			log.debug('showing the orderbook')
+			active_orders_dicts = (Order
+				.select(
+					Order.send_to_address,
+					Order.order_type,
+					Order.source,
+					Order.target,
+					Order.amount,
+					Order.amount_settled,
+					Order.amount_ask,
+					Order.created,
+					Order.price_ask,
+					Order.status)
+				.where(
+					(Order.source == SRC_CRY) | (Order.source == TRG_CRY) 
+					& (Order.status >= Order.STATUS_ACTIVE) 
+					& (Order.status < Order.STATUS_FILLED) 
+					& (TIMESTAMP < Order.valid_until))
+				.order_by(Order.price_ask.asc(),Order.created.desc())
+				.for_update(True) ## maybe add nowait?
+				.dicts()
+				) 
+			active_orders_dicts.execute()
+			
+			orderbook = OrderBookDicts(active_orders_dicts)
+			#orderbook.show_order_dicts()
+			
+			#sys.exit('stop')
+			
+			#x = orderbook.get_fok()
+			#print "row",x
+			
+			#orderbook = OrderBook(active_orders)
+			#log.debug('showing the orderbook')
+			y = orderbook.lookup_ob(status='200')
+			print "BTC ", y
+			#x = orderbook.settle_orders()
+			#print x
 			#orderbook.show_order_book()
-			x = orderbook.settle_orders()
-			print x
 			sys.exit('stop')
 			
 			#log.debug('created query')
