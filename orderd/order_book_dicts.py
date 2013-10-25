@@ -40,6 +40,7 @@ class OrderBookDicts(list):
 		for row in self.lod:
 			if row['order_type'] == 2:
 				print row
+				
 	def get_next_order(self):
 		self.order = self.lod.pop(0)
 		x = self.order['send_to_address'][0:8]

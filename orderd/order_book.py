@@ -28,7 +28,7 @@ class OrderBook(list):
 	
 	def __init__(self, data=''):
 		if data != '':
-			self.orderbook = data[:]
+			self.orderbook = data[:] # shallow copy required to have a proper lsit o dicts
 			log.debug('init with sliced orderbook data')
 		else:
 			self.orderbook = ''
@@ -39,12 +39,16 @@ class OrderBook(list):
 		
 	def update_status(self, status):
 		pass
-		self.status = status
+		self.new_status = status
+		print "NEW STATUS: ", self.new_status
 		# get first order
-		self.order = self.orderbook[2]
+		self.addr = self.orderbook[0].send_to_address
+		self.status = self.orderbook[0].status
 		#print __print_order(self.order)
-		print "Status: ", self.status,self.order
-		
+		print "Address: ", self.addr[0:6]," Status: ",self.status
+		self.orderbook[0].status = self.new_status
+		self.status = self.orderbook[0].status
+		print "Address: ", self.addr[0:6]," Status: ",self.status
 	def get_recent_prices():
 		pass
 		
