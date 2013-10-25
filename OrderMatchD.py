@@ -13,7 +13,8 @@ from orderd.logger import log
 #import orderd.conf
 #from orderd.conf import *
 from coindb.coindb import *
-from orderd.order_book import OrderBook, OrderBookDicts
+from orderd.order_book import OrderBook
+from orderd.order_book_dicts import OrderBookDicts
 #from orderd.order_db import *
 #from order_db import Order
 
@@ -161,16 +162,25 @@ class OrderDaemon(Daemon):
 			
 			orderbook = OrderBookDicts(active_orders_dicts)
 			#orderbook.show_order_dicts()
+			orderbook.get_next_order()
+			orderbook.get_next_order()
+			orderbook.get_next_order()
+			sys.exit('stop')
 			
-			#sys.exit('stop')
-			
-			#x = orderbook.get_fok()
-			#print "row",x
 			
 			#orderbook = OrderBook(active_orders)
 			#log.debug('showing the orderbook')
-			y = orderbook.lookup_ob(status='200')
-			print "BTC ", y
+			#orderbook.show_order_book('raw')
+			#print "LAST PRICE: " + str(orderbook.get_last_price())
+
+			##############################
+			# testing updateing data in a tuple/row
+			
+			#x = orderbook.update_status('999')
+			#print x
+			#orderbook.print_order(x)
+			#orderbook.show_order_book('raw')
+			
 			#x = orderbook.settle_orders()
 			#print x
 			#orderbook.show_order_book()

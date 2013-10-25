@@ -22,14 +22,35 @@ from logger import log
 
 
 class OrderBook(list):
+	__last_transactions = []
+	__last_price = ''
+	__recent_prices = []
+	
 	def __init__(self, data=''):
 		if data != '':
-			self.orderbook = data
-			log.debug('init with orderbook data')
+			self.orderbook = data[:]
+			log.debug('init with sliced orderbook data')
 		else:
 			self.orderbook = ''
 			log.debug('init with empty orderbook')
-	
+
+	def get_recent_transactions(self):
+		pass
+		
+	def update_status(self, status):
+		pass
+		self.status = status
+		# get first order
+		self.order = self.orderbook[2]
+		#print __print_order(self.order)
+		print "Status: ", self.status,self.order
+		
+	def get_recent_prices():
+		pass
+		
+	def get_last_price(self):
+		print self.__last_price
+		
 	def settle_order(self, address):
 		self.address = address
 		log.debug('Settling order  ' + address)
@@ -40,7 +61,40 @@ class OrderBook(list):
 		for left in self.orderbook:
 			self.settle_order(left.send_to_address)
 
-	def show_order_book(self):
+	def print_order(self, order):
+		self.order = order
+		for v in self.order: 
+			print v
+			
+	def show_order_book(self, type):
+		self.type = type
+		if type == 'screen':
+			print '   ADDRESS  SRC TRG TYP STAT          AMT       AMT_ASK    AMT_FILLED   PRICE'
+			for order in self.orderbook:
+				print ('>> {0} {1} {2} {3} {4:4d} {5:13d} {6:13d} {7:13d} @ {8:4.5f}'.format(
+					order.send_to_address[0:8],
+					order.source,
+					order.target,
+					str(order.order_type).zfill(2),
+					order.status,
+					order.amount,
+					order.amount_ask,
+					order.amount_settled,
+					order.price_ask))
+		elif type == 'raw':
+			for order in self.orderbook:
+				print (
+					order.send_to_address,
+					order.source,
+					order.target,
+					order.order_type,
+					order.status,
+					order.amount,
+					order.amount_ask,
+					order.amount_settled,
+					order.price_ask)
+		
+	def show_order_book2(self):
 		print '   ADDRESS  SRC TRG TYP STAT          AMT       AMT_ASK    AMT_FILLED   PRICE'
 		for order in self.orderbook:
 			print ('>> {0} {1} {2} {3} {4:4d} {5:13d} {6:13d} {7:13d} @ {8:4.5f}'.format(
@@ -53,41 +107,3 @@ class OrderBook(list):
 				order.amount_ask,
 				order.amount_settled,
 				order.price_ask))
-
-class OrderBookDicts(list):
-	def __init__(self, data=''):
-		self.lod = []
-		if data != '':
-			self.lod = data
-			log.debug('init with orderbook dicts')
-		else:
-			self.lod = ''
-			log.debug('init with empty orderbook dicts')
-	
-	def show_order_dicts(self):
-		for row in self.lod:
-			print row
-
-	def get_fok(self):
-		for row in self.lod:
-			if row['order_type'] == 2:
-				print row
-
-
-		
-	def query_ob(self, filter=None, sort_keys=None):
-		if filter is not None:
-			self.lod = (r for r in self.lod if filter(r))
-		if sort_keys is not None:
- 			self.lod = sorted(self.lod, key=lambda r:[r[k] for k in sort_keys])
-		else:
-			self.lod = list(self.lod)
-		return self.lod
-
-	def lookup_ob(self,**kw):
-		self.rows = []
-		for row in self.lod:
-			for k,v in kw.iteritems():
-				if row[k] == str(v):
-					self.rows.append(row)
-		return self.rows
