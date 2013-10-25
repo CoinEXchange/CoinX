@@ -160,24 +160,29 @@ class OrderDaemon(Daemon):
 				) 
 			active_orders_dicts.execute()
 			
-			orderbook = OrderBookDicts(active_orders_dicts)
-			#orderbook.show_order_dicts()
-			orderbook.get_next_order()
-			orderbook.get_next_order()
-			orderbook.get_next_order()
-			sys.exit('stop')
+			###############################################
+			## OK mit dicts
+			##obd = OrderBookDicts(active_orders_dicts)
+			##obd.show_order_dicts()
+			#obd.get_next_order()
+			#obd.get_next_order()
+			#obd.get_next_order()
+			#sys.exit('stop')
 			
 			
-			#orderbook = OrderBook(active_orders)
-			#log.debug('showing the orderbook')
-			#orderbook.show_order_book('raw')
-			#print "LAST PRICE: " + str(orderbook.get_last_price())
+			###############################################
+			## OK with orig and shallow copy
+			ob = OrderBook(active_orders)
+			log.debug('showing the orderbook')
+			ob.show_order_book('raw')
+			#print "LAST PRICE: " + str(ob.get_last_price())
 
 			##############################
 			# testing updateing data in a tuple/row
 			
-			#x = orderbook.update_status('999')
-			#print x
+			x = ob.update_status('999')
+			print x
+			ob.show_order_book('raw')
 			#orderbook.print_order(x)
 			#orderbook.show_order_book('raw')
 			
