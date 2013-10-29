@@ -9,14 +9,10 @@ from peewee import *
 import datetime
 import orderd.logger
 from orderd.logger import log
-# read configuration values from module
-#import orderd.conf
-#from orderd.conf import *
+
 from coindb.coindb import *
 from orderd.order_book import OrderBook
-from orderd.order_book_dicts import OrderBookDicts
-#from orderd.order_db import *
-#from order_db import Order
+
 
 
 # All bitcoin values are in Satoshi i.e. divide by 100.000.000 to get the amount in BTC
@@ -33,49 +29,6 @@ class OrderDaemon(Daemon):
 		SRC_CRY = 'BTC'
 		TRG_CRY = 'LTC'
 		
-		
-		def discover_price():
-			## ?? market orders are removed. shold other order types be removed for price discovery
-			highest_buy = (Order
-				.select(fn.max(Order.price_ask)) # highest bid
-				.where(
-					(Order.source == SRC_CRY) # left side
-					& (Order.status >= Order.STATUS_ACTIVE) 
-					& (Order.status < Order.STATUS_FILLED)
-					& (TIMESTAMP < Order.valid_until)
-					& (Order.price_ask > 0))
-				.scalar()) 
-
-			lowest_sell = (Order
-				.select(fn.min(Order.price_ask)) # lowest offer
-				.where(
-					(Order.target == SRC_CRY) # right side
-					& (Order.status >= Order.STATUS_ACTIVE) 
-					& (Order.status < Order.STATUS_FILLED)
-					& (TIMESTAMP < Order.valid_until)
-					& (Order.price_ask > 0))
-				.scalar()) 
-
-			left = highest_buy
-			right = lowest_sell
-
-			log.debug ('HIGHEST BUY: ' + str(left))
-			log.debug ('LOWEST SELL: ' + str(right))
-
-			if left == right:
-				market_price = left
-				log.debug('there is a market price based on orders' + str(left))
-			elif left < right:
-				market_price = (left + right)/2
-				log.debug('there is a averaged market price' + str(market_price))
-			elif left > right:
-				log.debug('there are valid transactions to be executed first')
-				## TODO
-				## calculate market price based on balanceing the order book
-				market_price = None
-
-			return market_price
-
 		db.init(dname,host='192.168.1.22', user='jack',passwd='hammer')
 		try:
 			db.connect()
@@ -137,38 +90,6 @@ class OrderDaemon(Daemon):
 				) 
 			active_orders.execute()
 			
-			active_orders_dicts = (Order
-				.select(
-					Order.send_to_address,
-					Order.order_type,
-					Order.source,
-					Order.target,
-					Order.amount,
-					Order.amount_settled,
-					Order.amount_ask,
-					Order.created,
-					Order.price_ask,
-					Order.status)
-				.where(
-					(Order.source == SRC_CRY) | (Order.source == TRG_CRY) 
-					& (Order.status >= Order.STATUS_ACTIVE) 
-					& (Order.status < Order.STATUS_FILLED) 
-					& (TIMESTAMP < Order.valid_until))
-				.order_by(Order.price_ask.asc(),Order.created.desc())
-				.for_update(True) ## maybe add nowait?
-				.dicts()
-				) 
-			active_orders_dicts.execute()
-			
-			###############################################
-			## OK mit dicts
-			##obd = OrderBookDicts(active_orders_dicts)
-			##obd.show_order_dicts()
-			#obd.get_next_order()
-			#obd.get_next_order()
-			#obd.get_next_order()
-			#sys.exit('stop')
-			
 			
 			###############################################
 			## OK with orig and shallow copy
@@ -189,8 +110,12 @@ class OrderDaemon(Daemon):
 			#x = orderbook.settle_orders()
 			#print x
 			#orderbook.show_order_book()
+			ob.discover_price()
 			sys.exit('stop')
 			
+			
+			###############################################
+			## DB LOCKING TESTS
 			#log.debug('created query')
 			#time.sleep(20)
 			#log.debug('executing')
