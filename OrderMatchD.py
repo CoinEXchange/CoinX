@@ -25,7 +25,7 @@ class OrderDaemon(Daemon):
 	def run(self):
 		# set up db
 		dname = 'btcltc_ML'
-		TIMESTAMP = '2013-10-16 00:00:00'
+		
 		SRC_CRY = 'BTC'
 		TRG_CRY = 'LTC'
 		
@@ -55,18 +55,14 @@ class OrderDaemon(Daemon):
 
 		
 		while True:
-			######################
-			# insert db query to get last price
-			# from the last filled or part filled - potentially use price_bought db field
-			# if none found get .... see voodoopad
-			x = discover_price()
-			print "Price ", x
 
-			
-			
 			######################
-			# get active orders
-			db.set_autocommit(False)
+			# get active orders from db
+			#db.set_autocommit(False)
+			db.set_autocommit(True)
+			
+			TIMESTAMP = '2013-10-16 00:00:00'
+			#TIMESTAMP = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
 			
 			active_orders = (Order
 				.select(
@@ -88,29 +84,40 @@ class OrderDaemon(Daemon):
 				.order_by(Order.price_ask.asc(),Order.created.desc())
 				.for_update(True) ## maybe add nowait?
 				) 
-			active_orders.execute()
+			#active_orders.execute()
+			
+			######################
+			# set canceled orders to topay
+			pay_canceled_orders = (Order
+				.update(
+					status=Order.STATUS_TOPAY)
+				.where(
+					(Order.status == Order.STATUS_CANCELED) 
+					)
+				) 
 			
 			
 			###############################################
-			## OK with orig and shallow copy
+			## set canceled order to TOPAY
+			no_canceled = pay_canceled_orders.execute()
+			log.debug('paying canceled order: ' + str(no_canceled))
+			
+			###############################################
+			## get the order book and init class
 			ob = OrderBook(active_orders)
-			log.debug('showing the orderbook')
-			ob.show_order_book('raw')
-			#print "LAST PRICE: " + str(ob.get_last_price())
-
-			##############################
-			# testing updateing data in a tuple/row
 			
-			x = ob.update_status('999')
-			print x
-			ob.show_order_book('raw')
-			#orderbook.print_order(x)
-			#orderbook.show_order_book('raw')
-			
-			#x = orderbook.settle_orders()
-			#print x
-			#orderbook.show_order_book()
+			###############################################
+			# discover price
+			# if the orderbook matching has been down this will be an open price scenario			
 			ob.discover_price()
+			
+			#log.debug('showing the orderbook')
+			#ob.show_order_book('screen')
+			
+			ob.settle_orderbook()
+
+
+
 			sys.exit('stop')
 			
 			
@@ -126,13 +133,14 @@ class OrderDaemon(Daemon):
 			#log.debug('after commi')
 			#time.sleep(100000)
 			
+			###############################################
+			# testing updateing data in a tuple/row
+			#x = ob.update_status('999')
+			#print x
+			#ob.show_order_book('raw')			
 			
-			
-			log.debug('running ...D')
-
+			log.debug('done settleing')
 			time.sleep(10)
-			log.info('running ...I')
-
 
 #####################################################
 if __name__ == "__main__":
