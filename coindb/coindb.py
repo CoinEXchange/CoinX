@@ -11,6 +11,13 @@ class COINModel(Model):
     class Meta:
         database = db
 
+
+class RTx(COINModel):
+    class Meta:
+        db_table = 'rtx'
+
+
+
 	
 class Order(COINModel):
     class Meta:
