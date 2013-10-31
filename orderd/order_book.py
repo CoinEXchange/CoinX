@@ -97,25 +97,47 @@ class OrderBook(list):
 #________________________________________________________________________
 	def settle_orderbook(self):
 		self.left = self.orderbook[:]
+		# shallow copy of the orderbook so we can use pop
+		
 		#for i in self.check_orders:
 		#	print i.send_to_address[0:8]
-		pass
+
 		while self.left != []:
 			self.next_order = self.left.pop(0)
-			#log.debug('trying to settle next order: ' + self.next_order.send_to_address[0:8] + self.next_order.source)
-			for right in self.left:
-				if self.next_order.source != right.source:
-					#log.debug('Comparing  '+self.next_order.send_to_address[0:8]+' '+self.next_order.source+' :: '+right.send_to_address[0:8]+' '+right.source)
+			log.debug('trying to settle next LEFT order:  ' + self.next_order.send_to_address[0:8] + ' ' + self.next_order.source + ' ' + str(self.next_order.status))
+			if self.next_order.status >= '300':
+				continue
+			else:
+				for right in self.left:
+					#_____TODO_____
+					# replace hard coded values with STATUS_... ie Order.STATUS_TOPAY ...
+					if (self.next_order.source == right.source):
+						continue
+					if self.next_order.status >= 300 or self.next_order.status < 200:
+						continue
+					if right.status >= 300 or right.status < 200:
+						continue
 					self.settle_order(self.next_order,right)
-				else:
-					# skip this record as same source currency
-					continue
+
+#________________________________________________________________________
+	def get_next_order(self):
+		# generator to loop over the orderbook, one by one
+		for next in self.orderbook:
+			yield next
+
 #________________________________________________________________________
 	def settle_order(self, left_order, right_order):
 		self.left_order = left_order
 		self.right_order = right_order
-		#print "Left ", self.left_order, "  Right ", self.right_order
-		log.debug('trying to settle next order: ' + self.left_order.send_to_address[0:8] + self.right_order.send_to_address[0:8])
+
+		log.debug('trying to settle next RIGHT order: ' 
+			+ self.left_order.send_to_address[0:8] + ' '
+			+ self.left_order.source + ' '
+			+ str(self.left_order.status) + ' '
+			+ ' <> ' 
+			+ self.right_order.send_to_address[0:8] + ' '
+			+ self.right_order.source + ' '
+			+ str(self.right_order.status))
 		
 		
 #________________________________________________________________________
@@ -161,4 +183,14 @@ class OrderBook(list):
 		self.orderbook[0].status = self.new_status
 		self.status = self.orderbook[0].status
 		print "Address: ", self.addr[0:6]," Status: ",self.status
-	
+
+
+#________________________________________________________________________
+	def loop_orders(self):
+		# using an generator to loop over the orders
+		self.c = self.get_next_order()
+		while True:
+			try:
+				print next(self.c).send_to_address[0:8]
+			except StopIteration:
+				break
