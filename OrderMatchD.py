@@ -1,8 +1,6 @@
 #!/usr/bin/env python
 
 import sys, time, os, atexit
-#import logging
-#import logging.handlers
 from modules.daemon import Daemon
 import peewee
 from peewee import *
@@ -115,11 +113,18 @@ class OrderDaemon(Daemon):
 			#ob.show_order_book('screen')
 			
 			ob.settle_orderbook()
-
-
+			
+			#___________________________________
+			# looping using a generator
+			#ob.loop_orders()
+			#c = ob.get_next()
+			#print next(c).send_to_address
+			#print next(c).send_to_address
 
 			sys.exit('stop')
-			
+			pass
+			#____TODO____
+			# before writing check if there is a new cancel status
 			
 			###############################################
 			## DB LOCKING TESTS
