@@ -95,6 +95,16 @@ class PAYDaemon(Daemon):
 	    fmt = '%Y-%m-%d %H:%M:%S'
 	    d_string = d.strftime(fmt)
 	    return d_string
+        def NEW_check_transactions(db,coin):
+	    log.debug('NEW checking transactions')
+            # 1st get all preorders
+
+            # 2nd get all open txids for preorders which we have received already
+
+            # 3rd get all transactions from currency daemon
+
+            
+
 
         def check_transactions(db,coin):
 	    log.debug('checking transactions')
@@ -106,6 +116,11 @@ class PAYDaemon(Daemon):
 		for trans in translist:
 		    if trans.category <> 'receive': continue
 		    if trans.address <> preorder.send_to_address: continue
+                    if preorder.receiving_txid == "": # 1st transaction for address -> create txid record
+                        # create new txid record and store txid in preorder
+                    if trans.txid <> preorder.receiving_txid: continue
+
+                    
 		    log.debug('       AMNT: %s  T: %s   PO:%s  ADR:%s', trans.amount, trans.confirmations, preorder.confirmations,trans.address)
 		    if trans.confirmations <> preorder.confirmations:
 		        preorder.confirmations = trans.confirmations
