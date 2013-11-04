@@ -25,7 +25,7 @@ class OrderBook(list):
 	__last_transactions = []	# list of last transactions
 	__last_price = ''			# price of last transaction
 	__last_limit = ''			# last discovered limit price -- see VoodooPad
-	__recent_prices = []		# list of last prices for last transactions
+	__last_prices = []		# list of last prices for last transactions
 	
 	def __init__(self, data=''):
 		if data != '':
@@ -34,7 +34,7 @@ class OrderBook(list):
 		else:
 			self.orderbook = ''
 			log.debug('init with empty orderbook')
-			
+		self.size = len(self.orderbook)	
 #________________________________________________________________________
 	def discover_price(self):
 		def highest_buy():
@@ -43,7 +43,10 @@ class OrderBook(list):
 			for order in self.orderbook:
 				if order.source == 'BTC' and order.price_ask > self.high:
 					self.high = order.price_ask
-			return self.high
+			if self.high == 0:
+				return None
+			else:
+				return self.high
 			
 		def lowest_sell(): 
 			pass # due to the way the list is pre sorted it would be sufficient to use the first 
@@ -54,28 +57,50 @@ class OrderBook(list):
 				if order.source == 'LTC' and order.price_ask > 0:
 					# print order.source, order.price_ask
 					self.sell.append(order.price_ask)
-			return min(self.sell)
+			if self.sell != []:
+				return min(self.sell)
+			else: return None
+		#_____TODO_____
+		# take into account that either or both could be yero as there are no limit orders
+		# rules
+		# if either side has no highest buy or lowest bid then the other side is the market price
+		# if on both side values are zero ... then we have to wait for a limit order to start filling
+		
 		log.debug('Discover price ...')
 		self.left_price = highest_buy()
 		self.right_price = lowest_sell()
 		log.debug('HIGHEST BUY: ' + str(self.left_price))
 		log.debug('LOWEST SELL: ' + str(self.right_price))
 		
-		if self.left_price == self.right_price:
+		if self.left_price == None and self.right_price == None:
+			# we only have market orders. stop processing the orderbook. wait for next limit order
+			self.market_price = 0
+		
+		elif self.left_price == None:
+			# left side has only market orders
+			self.market_price = self.right_price
+			
+		elif self.right_price == None:
+			# right side has only market orders
+			self.market_price = self.left_price
+				
+		elif self.left_price == self.right_price:
 			self.market_price = self.left_price
 			log.debug('there is a market price based on orders' + str(left))
 			
 		elif self.left_price < self.right_price:
 			self.market_price = (self.left_price + self.right_price)/2
-			log.debug('there is a averaged market price' + str(market_price))
+			log.debug('there is a averaged market price: ' + str(self.market_price))
 			
 		elif self.left_price > self.right_price:
 			log.debug('there are valid transactions to be executed first')
 			## TODO
 			## calculate market price based on balanceing the order book
 			pass
+			log.debug('build func to establish market price')
 			self.market_price = None
 			
+		log.debug('MARKET PRICE: ' + str(self.market_price))	
 		return self.market_price
 
 #________________________________________________________________________
@@ -92,19 +117,20 @@ class OrderBook(list):
 		pass
 
 	def clean_up(self):
+		#_____TODO_____
+		# when an interrupt is captured this function is to be called
+		# revert orderbook to last state .. ie do not write back changes
+		# close db
+		# probably better located in daemon
 		pass
 		
 #________________________________________________________________________
 	def settle_orderbook(self):
 		self.left = self.orderbook[:]
 		# shallow copy of the orderbook so we can use pop
-		
-		#for i in self.check_orders:
-		#	print i.send_to_address[0:8]
-
 		while self.left != []:
 			self.next_order = self.left.pop(0)
-			log.debug('trying to settle next LEFT order:  ' + self.next_order.send_to_address[0:8] + ' ' + self.next_order.source + ' ' + str(self.next_order.status))
+			log.debug('trying to settle next LEFT order:  ' + self.next_order.send_to_address[0:8] + ' ' + self.next_order.source + ' ' + str(self.next_order.status) + '-'*28)
 			if self.next_order.status >= '300':
 				continue
 			else:
@@ -112,32 +138,40 @@ class OrderBook(list):
 					#_____TODO_____
 					# replace hard coded values with STATUS_... ie Order.STATUS_TOPAY ...
 					if (self.next_order.source == right.source):
+						# opposite currency pairs only
 						continue
 					if self.next_order.status >= 300 or self.next_order.status < 200:
+						# ignore the ones settled already
 						continue
 					if right.status >= 300 or right.status < 200:
 						continue
 					self.settle_order(self.next_order,right)
 
-#________________________________________________________________________
-	def get_next_order(self):
-		# generator to loop over the orderbook, one by one
-		for next in self.orderbook:
-			yield next
 
 #________________________________________________________________________
 	def settle_order(self, left_order, right_order):
 		self.left_order = left_order
 		self.right_order = right_order
-
+		self.left_mo = '   '
+		self.right_mo = '   '
+		
+		if left_order.amount_ask == 0:
+			self.left_mo = ' MO'
+			
+		if right_order.amount_ask == 0:
+			self.right_mo = ' MO'
+			
 		log.debug('trying to settle next RIGHT order: ' 
 			+ self.left_order.send_to_address[0:8] + ' '
 			+ self.left_order.source + ' '
 			+ str(self.left_order.status) + ' '
-			+ ' <> ' 
+			+ self.left_mo
+			+ ' :: ' 
 			+ self.right_order.send_to_address[0:8] + ' '
 			+ self.right_order.source + ' '
-			+ str(self.right_order.status))
+			+ str(self.right_order.status)
+			+ self.right_mo)
+		
 		
 		
 #________________________________________________________________________
@@ -184,7 +218,12 @@ class OrderBook(list):
 		self.status = self.orderbook[0].status
 		print "Address: ", self.addr[0:6]," Status: ",self.status
 
-
+#________________________________________________________________________
+	def get_next_order(self):
+		# generator to loop over the orderbook, one by one
+		for next in self.orderbook:
+			yield next
+			
 #________________________________________________________________________
 	def loop_orders(self):
 		# using an generator to loop over the orders

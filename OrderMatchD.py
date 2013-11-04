@@ -22,7 +22,7 @@ class OrderDaemon(Daemon):
 
 	def run(self):
 		# set up db
-		dname = 'btcltc_ML'
+		dname = 'BTCLTC_ML'
 		
 		SRC_CRY = 'BTC'
 		TRG_CRY = 'LTC'
@@ -59,9 +59,9 @@ class OrderDaemon(Daemon):
 			#db.set_autocommit(False)
 			db.set_autocommit(True)
 			
-			TIMESTAMP = '2013-10-16 00:00:00'
-			#TIMESTAMP = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-			
+			#TIMESTAMP = '2013-10-16 00:00:00'
+			TIMESTAMP = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+			log.debug('TIME ' + str(TIMESTAMP))
 			active_orders = (Order
 				.select(
 					Order.send_to_address,
@@ -75,14 +75,14 @@ class OrderDaemon(Daemon):
 					Order.price_ask,
 					Order.status)
 				.where(
-					(Order.source == SRC_CRY) | (Order.source == TRG_CRY) 
-					& (Order.status >= Order.STATUS_ACTIVE) 
-					& (Order.status < Order.STATUS_FILLED) 
+					# (Order.source == SRC_CRY) | (Order.source == TRG_CRY) &
+					(Order.status >= Order.STATUS_ACTIVE)
+					& (Order.status < Order.STATUS_FILLED)
 					& (TIMESTAMP < Order.valid_until))
 				.order_by(Order.price_ask.asc(),Order.created.desc())
-				.for_update(True) ## maybe add nowait?
+			#	.for_update(True) ## maybe add nowait?
 				) 
-			#active_orders.execute()
+			
 			
 			######################
 			# set canceled orders to topay
@@ -102,15 +102,28 @@ class OrderDaemon(Daemon):
 			
 			###############################################
 			## get the order book and init class
+			active_orders.execute()
 			ob = OrderBook(active_orders)
+			ob.show_order_book('screen')
 			
+			if ob.size == 0:
+				log.debug('empty orderbook')
+				time.sleep(10)
+				continue
+			else:
+				log.debug('Orderbook size: '+str(ob.size))
 			###############################################
 			# discover price
 			# if the orderbook matching has been down this will be an open price scenario			
-			ob.discover_price()
-			
-			#log.debug('showing the orderbook')
 			#ob.show_order_book('screen')
+			market_price = ob.discover_price()
+			
+			if market_price == 0:
+				log.debug('There are only market order.')
+				time.sleep(10)
+				continue
+			elif market_price == None:
+				log.debug('settle valid transactions first.')
 			
 			ob.settle_orderbook()
 			
@@ -121,7 +134,7 @@ class OrderDaemon(Daemon):
 			#print next(c).send_to_address
 			#print next(c).send_to_address
 
-			sys.exit('stop')
+			#sys.exit('stop')
 			pass
 			#____TODO____
 			# before writing check if there is a new cancel status
